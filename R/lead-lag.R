@@ -44,53 +44,73 @@ NULL
 
 #' @export
 #' @rdname lead-lag
-lag <- function(x, n = 1L, default = NA, order_by = NULL, ...) {
+lead_lag <- function(x, n, default = NA, order_by = NULL, ...) {
   if (!is.null(order_by)) {
-    return(with_order(order_by, lag, x, n = n, default = default))
+    return(with_order(order_by, lead_lag, x, n = n, default = default))
   }
 
   if (inherits(x, "ts")) {
     bad_args("x", "must be a vector, not a ts object, do you want `stats::lag()`?")
   }
 
-  if (length(n) != 1 || !is.numeric(n) || n < 0) {
-    bad_args("n", "must be a nonnegative integer scalar, ",
+  if (length(n) != 1 || !is.numeric(n)) {
+    bad_args(
+      "n", "must be an integer scalar, ",
       "not {friendly_type_of(n)} of length {length(n)}."
     )
   }
-  if (n == 0) return(x)
+  if (n == 0) {
+    return(x)
+  }
+
+  lag_toggle <- (n < 0)
 
   xlen <- vec_size(x)
-  n <- pmin(n, xlen)
+  n <- pmin(abs(n), xlen)
 
   inputs <- vec_cast_common(default = default, x = x)
 
-  vec_c(
-    vec_rep(inputs$default, n),
-    vec_slice(inputs$x, seq_len(xlen - n))
-  )
+  if (lag_toggle == TRUE) {
+    return(
+      vec_c(
+        vec_rep(inputs$default, n),
+        vec_slice(inputs$x, seq_len(xlen - n))
+      )
+    )
+  }
+
+  if (lag_toggle == FALSE) {
+    return(
+      vec_c(
+        vec_slice(inputs$x, -seq_len(n)),
+        vec_rep(inputs$default, n)
+      )
+    )
+  }
 }
 
 #' @export
 #' @rdname lead-lag
-lead <- function(x, n = 1L, default = NA, order_by = NULL, ...) {
-  if (!is.null(order_by)) {
-    return(with_order(order_by, lead, x, n = n, default = default))
-  }
-
+lead <- function(x, n = 1L, ...) {
   if (length(n) != 1 || !is.numeric(n) || n < 0) {
-    bad_args("n", "must be a nonnegative integer scalar, ",
-             "not {friendly_type_of(n)} of length {length(n)}."
+    bad_args(
+      "n", "must be a nonnegative integer scalar, ",
+      "not {friendly_type_of(n)} of length {length(n)}."
     )
   }
-  if (n == 0) return(x)
 
-  xlen <- vec_size(x)
-  n <- pmin(n, xlen)
+  lead_lag(x, n, ...)
+}
 
-  inputs <- vec_cast_common(default = default, x = x)
-  vec_c(
-    vec_slice(inputs$x, -seq_len(n)),
-    vec_rep(inputs$default, n)
-  )
+#' @export
+#' @rdname lead-lag
+lag <- function(x, n = 1L, ...) {
+  if (length(n) != 1 || !is.numeric(n) || n < 0) {
+    bad_args(
+      "n", "must be a nonnegative integer scalar, ",
+      "not {friendly_type_of(n)} of length {length(n)}."
+    )
+  }
+
+  lead_lag(x, -n, ...)
 }
